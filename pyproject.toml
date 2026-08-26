@@ -1,0 +1,28 @@
+[project]
+name = "monty-claw"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "prem", email = "prem.ch@ku.th" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=3.3.1",
+    "pydantic-monty>=0.0.21",
+]
+
+[project.scripts]
+monty-claw = "monty_claw:main"
+
+[tool.maturin]
+module-name = "monty_claw._core"
+python-packages = ["monty_claw"]
+python-source = "src"
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
