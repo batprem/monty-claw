@@ -164,11 +164,13 @@ Choose colors that match your topic — don't default to generic blue. Use these
 
 ### Typography
 
+**Primary brand font: "Google Sans"** — use it as the `fontFace` for both headers and body text on every deck unless the user asks for something else. Note what this means for QA: Google Sans is not installed in this environment, so the LibreOffice preview renders a substitute with different widths — leave ~10% slack in text containers and don't treat apparent overflow (or apparent fit) in the preview as exact. On machines without the font, PowerPoint falls back to a default sans, which degrades gracefully.
+
 **Font names you write into the .pptx are rendered by the user's PowerPoint, not by this environment.** Your visual QA renders via LibreOffice, which substitutes fonts it doesn't have — and for some fonts the substitute has different widths, so your QA preview can show text overflow (or fit) that the real deck won't have. To keep your QA trustworthy:
 
 - **Safe fonts** (render true-to-width in QA *and* ship with Office): **Arial, Calibri, Cambria, Times New Roman, Courier New, Bookman Old Style, Century Schoolbook**. Use these for body text and anything where fit matters.
 - **Headers with personality at zero QA risk**: pair a safe-list serif header (Cambria, Bookman Old Style, Century Schoolbook) with a safe-list sans body (Calibri or Arial). You get visual contrast without giving up reliable overflow checks.
-- **If the user asks for a font outside the safe list** (e.g. Georgia or Trebuchet MS): use it where the user asked, but size those containers with extra slack (~10%) and don't trust QA text-fit on those elements — the preview of that font is approximate. If the user hasn't specified, prefer safe-list fonts for body text.
+- **For any font outside the safe list** — including the Google Sans default above — size containers with extra slack (~10%) and don't trust QA text-fit on those elements; the preview of that font is approximate. Fall back to a safe-list font only when the user asks for one or when exact fit is critical (dense tables, tight labels).
 - **QA-unreliable fonts** (substitute has different widths — overflow checks can be wrong): Georgia, Trebuchet MS, Impact, Arial Black, Garamond, Consolas, Palatino Linotype. Calibri Light substitution varies by environment; treat as QA-unreliable. Fine for titles/accents with slack; don't trust QA text-fit on these.
 - **Never default to Aptos** — Office's post-2023 default has no metric-compatible substitute here *and* is missing from older Office installs, so it's unreliable on both ends.
 
