@@ -1,0 +1,34 @@
+{
+  "skill_name": "pptx",
+  "evals": [
+    {
+      "id": 0,
+      "name": "branded-pitch-deck",
+      "prompt": "Create a 5-slide pitch deck called monty-claw-pitch.pptx for 'Monty Claw', an AI pair-programming assistant. Slides: title, the problem (devs lose hours on boilerplate), the solution (agentic code generation), traction (2k users in 3 months, 40% weekly growth), and a closing call-to-action. Make it visually polished with illustrations.",
+      "expected_output": "A .pptx using the brand red/orange/blue theme, the cat logo on the title slide, at least one codex-generated on-brand illustration, no large empty regions on any slide.",
+      "files": [],
+      "assertions": [
+        "Deck has exactly 5 slides and passes validate.py with no errors",
+        "The brand cat logo (assets/page-logos.jpg) is embedded in the deck's media",
+        "Brand palette colors (D74248 / FA8832 / 4DBCD8) are used in the slide XML",
+        "At least one generated illustration image (a PNG that is not the logo) is embedded in the deck",
+        "No slide has a large empty region (dead zone taller/wider than ~2 inches) in the rendered images",
+        "No text overflow, cutoff, or overlapping elements in the rendered images"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "process-diagram-deck",
+      "prompt": "Make me a short presentation (ci-overview.pptx, 4 slides) explaining our CI/CD pipeline for new engineers: overview, the three stages (build, test, deploy), common failure points, and where to get help. Include a diagram of the pipeline.",
+      "expected_output": "A .pptx where the pipeline diagram uses real text labels (shapes or shape-overlaid art, not misspelled generated text), on-brand theme, slides filled without dead zones.",
+      "files": [],
+      "assertions": [
+        "Deck has exactly 4 slides and passes validate.py with no errors",
+        "Pipeline stage labels (Build, Test, Deploy) are extractable as real text via markitdown, not baked into an image",
+        "Brand palette colors (D74248 / FA8832 / 4DBCD8) are used in the slide XML",
+        "No slide has a large empty region (dead zone taller/wider than ~2 inches) in the rendered images",
+        "No text overflow, cutoff, or overlapping elements in the rendered images"
+      ]
+    }
+  ]
+}
