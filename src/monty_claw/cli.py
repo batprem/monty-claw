@@ -62,11 +62,8 @@ async def _set_webhook(url: str) -> None:
 
 async def _repl() -> None:
     """Terminal chat against the full engine with local storage — M1 smoke test."""
-    from pydantic_monty import AsyncMonty
-
     from monty_claw.db.base import ChatRecord, ChatRepo
     from monty_claw.rlm.engine import RlmEngine
-    from monty_claw.rlm.llm import OpenAiLlmClient
     from monty_claw.storage import LocalStorage
 
     settings = get_settings()
@@ -89,7 +86,6 @@ async def _repl() -> None:
 
         async def save(self, record: ChatRecord) -> None:
             data = {
-                'history': record.history,
                 'session_blob_key': record.session_blob_key,
                 'last_update_id': record.last_update_id,
                 'transcript': record.transcript,
@@ -105,34 +101,27 @@ async def _repl() -> None:
     async def send_progress(text: str) -> None:
         print(f'[progress] {text}')
 
-    async with AsyncMonty() as pool:
-        engine = RlmEngine(
-            pool=pool,
-            llm=OpenAiLlmClient(settings.llm_base_url, settings.llm_api_key, settings.llm_model),
-            repo=repo,
-            storage=storage,
-            settings=settings,
-        )
-        print(f'monty-claw repl — model {settings.llm_model} at {settings.llm_base_url}')
-        print('state dir:', settings.local_storage_dir, '(type /reset to wipe, ctrl-d to exit)')
-        chat_key = 'repl:default'
-        while True:
-            try:
-                text = input('\nyou> ').strip()
-            except EOFError:
-                print()
-                return
-            if not text:
-                continue
-            if text == '/reset':
-                record = await repo.get(chat_key)
-                if record and record.session_blob_key:
-                    await storage.delete(record.session_blob_key)
-                await repo.delete(chat_key)
-                print('memory wiped')
-                continue
-            reply = await engine.run_turn(chat_key, text, send_progress)
-            print(f'\nbot> {reply}')
+    engine = RlmEngine(repo=repo, storage=storage, settings=settings)
+    print(f'monty-claw repl — model {settings.llm_model} at {settings.llm_base_url}')
+    print('state dir:', settings.local_storage_dir, '(type /reset to wipe, ctrl-d to exit)')
+    chat_key = 'repl:default'
+    while True:
+        try:
+            text = input('\nyou> ').strip()
+        except EOFError:
+            print()
+            return
+        if not text:
+            continue
+        if text == '/reset':
+            record = await repo.get(chat_key)
+            if record and record.session_blob_key:
+                await storage.delete(record.session_blob_key)
+            await repo.delete(chat_key)
+            print('memory wiped')
+            continue
+        reply = await engine.run_turn(chat_key, text, send_progress)
+        print(f'\nbot> {reply}')
 
 
 def main() -> None:

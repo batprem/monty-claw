@@ -10,6 +10,7 @@ from monty_claw.channels.base import InboundMessage
 logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_CHARS = 4096
+MAX_CAPTION_CHARS = 1024
 
 
 def chunk_text(text: str, limit: int = MAX_MESSAGE_CHARS) -> list[str]:
@@ -54,6 +55,22 @@ class TelegramChannel:
     async def send_text(self, chat_id: str, text: str) -> None:
         for chunk in chunk_text(text):
             await self._call('sendMessage', {'chat_id': chat_id, 'text': chunk})
+
+    async def send_photo(self, chat_id: str, data: bytes, caption: str = '') -> None:
+        """Upload an image so it renders inline in the chat.
+
+        The bytes are posted directly rather than handed to Telegram as a URL,
+        so this works whether or not the deployment has a public origin.
+        """
+        response = await self._client.post(
+            f'{self._base}/sendPhoto',
+            data={'chat_id': chat_id, 'caption': caption[:MAX_CAPTION_CHARS]},
+            files={'photo': ('image.png', data, 'image/png')},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not payload.get('ok'):
+            raise RuntimeError(f'telegram sendPhoto failed: {payload}')
 
     async def send_typing(self, chat_id: str) -> None:
         try:

@@ -1,6 +1,7 @@
-"""Web UI API: login, chat, and runtime configuration."""
+"""Web UI API: login, chat, runtime configuration, and generated media."""
 
 import logging
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -8,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from monty_claw.db.base import ChatRecord
+from monty_claw.rlm import images
 from monty_claw.web import auth
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,10 @@ STATIC_DIR = Path(__file__).parent / 'static'
 INDEX_HTML = STATIC_DIR / 'index.html'
 TRANSCRIPT_MAX_ENTRIES = 200
 
+# Media keys the /media route will serve: the agent's own `media/<chat>/<uuid>.png`
+# shape and nothing else — no dots, so no traversal out of the prefix.
+MEDIA_KEY_RE = re.compile(r'[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_\-]+)*\.png')
+
 # Settings fields editable from the configuration tab. Everything else is
 # deploy-time only.
 EDITABLE_FIELDS = (
@@ -25,7 +31,7 @@ EDITABLE_FIELDS = (
     'llm_model',
     'llm_api_key',
     'max_iterations',
-    'stdout_max_bytes',
+    'max_tool_calls',
     'history_max_turns',
     'monty_max_duration_secs',
     'turn_deadline_secs',
@@ -57,6 +63,25 @@ class ChatRequest(BaseModel):
 @router.get('/', include_in_schema=False)
 async def index() -> FileResponse:
     return FileResponse(INDEX_HTML, media_type='text/html')
+
+
+@router.get('/media/{path:path}', include_in_schema=False)
+async def media(request: Request, path: str) -> Response:
+    """Serve a generated image.
+
+    Deliberately unauthenticated so the URL the agent hands out can be opened
+    (or shared) from anywhere; the random key is what keeps it private.
+    """
+    if not MEDIA_KEY_RE.fullmatch(path):
+        raise HTTPException(status_code=404)
+    data = await request.app.state.storage.get_bytes(f'media/{path}')
+    if data is None:
+        raise HTTPException(status_code=404)
+    return Response(
+        content=data,
+        media_type=images.MIME_TYPE,
+        headers={'Cache-Control': 'public, max-age=86400, immutable'},
+    )
 
 
 @router.post('/api/login')
@@ -175,9 +200,8 @@ async def put_config(request: Request, body: dict, username: str = Depends(requi
 
 
 def apply_config(app, changes: dict) -> None:
-    """Mutate live settings and rebuild the LLM client / engine."""
+    """Mutate live settings and rebuild the agent with them."""
     from monty_claw.rlm.engine import RlmEngine
-    from monty_claw.rlm.llm import OpenAiLlmClient
 
     if not changes:
         return
@@ -185,8 +209,6 @@ def apply_config(app, changes: dict) -> None:
     for name, value in changes.items():
         setattr(settings, name, value)
     app.state.engine = RlmEngine(
-        pool=app.state.pool,
-        llm=OpenAiLlmClient(settings.llm_base_url, settings.llm_api_key, settings.llm_model),
         repo=app.state.repo,
         storage=app.state.storage,
         settings=settings,

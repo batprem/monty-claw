@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     gcs_bucket: str = ''
     local_storage_dir: Path = Path('.monty_claw_state')
 
+    # Public origin of this deployment (e.g. https://monty-claw-xyz.run.app),
+    # used to build shareable URLs for generated media. Left empty, those URLs
+    # are site-relative, which only works from the web UI itself.
+    public_base_url: str = ''
+
     # Web UI (disabled unless both username and password are set)
     web_username: str = ''
     web_password: str = ''
@@ -34,13 +39,15 @@ class Settings(BaseSettings):
     web_secret_key: str = ''
     web_session_ttl_secs: int = 30 * 24 * 3600
 
-    # RLM engine knobs
+    # Agent engine knobs
+    # Model requests allowed in one turn (Pydantic AI usage limit).
     max_iterations: int = 8
-    stdout_max_bytes: int = 4096
+    # Nested tool calls one `run_code` snippet may dispatch.
+    max_tool_calls: int = 100
+    # User turns of conversation kept as the assistant's memory.
     history_max_turns: int = 20
     monty_max_duration_secs: float = 30.0
     monty_max_memory: int = 200 * 1024 * 1024
-    monty_max_recursion_depth: int = 200
     # Stay under Telegram's ~60s webhook patience; Cloud Run timeout is headroom.
     turn_deadline_secs: float = 50.0
 

@@ -15,14 +15,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic_monty import AsyncMonty
 from pymongo import AsyncMongoClient
 
 from monty_claw.channels.telegram import TelegramChannel
 from monty_claw.config import Settings, get_settings
 from monty_claw.db.mongo import MongoChatRepo, MongoConfigRepo
 from monty_claw.rlm.engine import RlmEngine
-from monty_claw.rlm.llm import OpenAiLlmClient
 from monty_claw.storage import get_storage
 from monty_claw.web import apply_config
 from monty_claw.web import router as web_router
@@ -53,6 +51,9 @@ async def handle_inbound(app: FastAPI, payload: dict) -> None:
     async def send_progress(text: str) -> None:
         await telegram.send_text(inbound.chat_id, text)
 
+    async def send_photo(data: bytes, caption: str) -> None:
+        await telegram.send_photo(inbound.chat_id, data, caption)
+
     if inbound.text.strip() == '/reset':
         record = await repo.get(chat_key)
         if record and record.session_blob_key:
@@ -61,7 +62,7 @@ async def handle_inbound(app: FastAPI, payload: dict) -> None:
         await telegram.send_text(inbound.chat_id, 'Memory wiped. Fresh start.')
         return
 
-    reply = await engine.run_turn(chat_key, inbound.text, send_progress)
+    reply = await engine.run_turn(chat_key, inbound.text, send_progress, send_photo)
 
     # Persist the dedupe marker on the freshly saved record.
     if inbound.update_id is not None:
@@ -79,39 +80,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         mongo = AsyncMongoClient(settings.mongodb_uri)
-        async with AsyncMonty() as pool:
-            app.state.settings = settings
-            app.state.pool = pool
-            app.state.storage = get_storage(settings)
-            app.state.repo = MongoChatRepo(mongo, settings.mongodb_db)
-            app.state.config_repo = MongoConfigRepo(mongo, settings.mongodb_db)
-            app.state.telegram = TelegramChannel(settings.telegram_bot_token)
-            app.state.engine = RlmEngine(
-                pool=pool,
-                llm=OpenAiLlmClient(settings.llm_base_url, settings.llm_api_key, settings.llm_model),
-                repo=app.state.repo,
-                storage=app.state.storage,
-                settings=settings,
-            )
-            # Re-apply config overrides saved from the web UI. Best-effort:
-            # an unreachable Mongo shouldn't stop startup (webhook requests
-            # will surface the real error).
-            app.state.config_values = {}
-            if settings.web_username and settings.web_password:
-                try:
-                    app.state.config_values = await asyncio.wait_for(
-                        app.state.config_repo.load(), timeout=5.0
-                    )
-                    apply_config(app, app.state.config_values)
-                except Exception:
-                    logger.warning('could not load config overrides from MongoDB', exc_info=True)
+        app.state.settings = settings
+        app.state.storage = get_storage(settings)
+        app.state.repo = MongoChatRepo(mongo, settings.mongodb_db)
+        app.state.config_repo = MongoConfigRepo(mongo, settings.mongodb_db)
+        app.state.telegram = TelegramChannel(settings.telegram_bot_token)
+        app.state.engine = RlmEngine(
+            repo=app.state.repo,
+            storage=app.state.storage,
+            settings=settings,
+        )
+        # Re-apply config overrides saved from the web UI. Best-effort:
+        # an unreachable Mongo shouldn't stop startup (webhook requests
+        # will surface the real error).
+        app.state.config_values = {}
+        if settings.web_username and settings.web_password:
             try:
-                yield
-            finally:
-                await app.state.telegram.aclose()
-                await mongo.close()
+                app.state.config_values = await asyncio.wait_for(
+                    app.state.config_repo.load(), timeout=5.0
+                )
+                apply_config(app, app.state.config_values)
+            except Exception:
+                logger.warning('could not load config overrides from MongoDB', exc_info=True)
+        try:
+            yield
+        finally:
+            await app.state.telegram.aclose()
+            await mongo.close()
 
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(title='MontyClaw', lifespan=lifespan)
     app.include_router(web_router)
     app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 

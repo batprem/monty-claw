@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>monty-claw</title>
+<title>MontyClaw</title>
 <link rel="icon" type="image/jpeg" href="/static/logo.jpg">
 <style>
   :root {
@@ -107,9 +107,9 @@
 
 <div id="login-overlay" class="hidden">
   <form id="login-box">
-    <img class="logo" src="/static/logo.jpg" alt="monty-claw logo">
-    <h1>monty-<span style="color:var(--accent)">claw</span></h1>
-    <p>Sign in to your assistant</p>
+    <img class="logo" src="/static/logo.jpg" alt="MontyClaw logo">
+    <h1>Monty<span style="color:var(--accent)">Claw</span></h1>
+    <p>Sign in to MontyClaw</p>
     <div class="field"><label for="login-username">Username</label>
       <input id="login-username" autocomplete="username" required></div>
     <div class="field"><label for="login-password">Password</label>
@@ -120,7 +120,7 @@
 </div>
 
 <header>
-  <h1><img class="logo" src="/static/logo.jpg" alt="monty-claw logo"><b>monty-<span>claw</span></b></h1>
+  <h1><img class="logo" src="/static/logo.jpg" alt="MontyClaw logo"><b>Monty<span>Claw</span></b></h1>
   <nav>
     <button id="tab-chat" class="active">Chat</button>
     <button id="tab-config">Configuration</button>
@@ -134,10 +134,10 @@
   <section id="chat-page" class="page active">
     <div id="messages"></div>
     <form id="composer">
-      <textarea id="input" rows="1" placeholder="Message your assistant…"></textarea>
+      <textarea id="input" rows="1" placeholder="Message MontyClaw…"></textarea>
       <button id="send" type="submit">Send</button>
     </form>
-    <div class="hint">Type <code>/reset</code> to wipe the assistant's memory. Enter to send, Shift+Enter for a new line.</div>
+    <div class="hint">Type <code>/reset</code> to wipe MontyClaw's memory. Enter to send, Shift+Enter for a new line.</div>
   </section>
 
   <section id="config-page" class="page">
@@ -164,8 +164,8 @@
             <input id="cfg-monty_max_duration_secs" name="monty_max_duration_secs" type="number" min="1" step="1"></div>
           <div class="field"><label for="cfg-history_max_turns">History window (turns)</label>
             <input id="cfg-history_max_turns" name="history_max_turns" type="number" min="1" max="200"></div>
-          <div class="field"><label for="cfg-stdout_max_bytes">Stdout truncation (bytes)</label>
-            <input id="cfg-stdout_max_bytes" name="stdout_max_bytes" type="number" min="256" step="256"></div>
+          <div class="field"><label for="cfg-max_tool_calls">Max tool calls per run_code</label>
+            <input id="cfg-max_tool_calls" name="max_tool_calls" type="number" min="1" max="1000"></div>
         </div>
       </div>
       <div class="card">

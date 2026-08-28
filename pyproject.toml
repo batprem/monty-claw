@@ -16,6 +16,9 @@ dependencies = [
     "pydantic-settings>=2.5",
     "pymongo>=4.9",
     "google-cloud-storage>=2.18",
+    "pydantic-ai-slim[openai]>=2.35",
+    "pydantic-ai-harness[codemode]>=0.27",
+    "pillow>=10.1",
 ]
 
 [dependency-groups]

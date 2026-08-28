@@ -1,22 +1,14 @@
-"""LLM client: thin wrapper over any OpenAI-compatible endpoint."""
+"""Model factory: any OpenAI-compatible endpoint, as a Pydantic AI model."""
 
-from typing import Any, Protocol
+from pydantic_ai.models import Model
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
-from openai import AsyncOpenAI
-
-
-class LlmClient(Protocol):
-    async def complete(self, messages: list[dict[str, Any]]) -> str: ...
+from monty_claw.config import Settings
 
 
-class OpenAiLlmClient:
-    def __init__(self, base_url: str, api_key: str, model: str) -> None:
-        self._client = AsyncOpenAI(base_url=base_url, api_key=api_key)
-        self._model = model
-
-    async def complete(self, messages: list[dict[str, Any]]) -> str:
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,  # type: ignore[arg-type]
-        )
-        return response.choices[0].message.content or ''
+def build_model(settings: Settings) -> Model:
+    return OpenAIChatModel(
+        settings.llm_model,
+        provider=OpenAIProvider(base_url=settings.llm_base_url, api_key=settings.llm_api_key),
+    )

@@ -1,8 +1,8 @@
 # Deploying monty-claw to Cloud Run
 
-The service is stateless: chat history and dedupe live in MongoDB, Monty
-session dumps (the assistant's memory) live in GCS. Telegram delivers
-messages via webhook; the whole RLM turn runs inside the request (safe with
+The service is stateless: the chat record (transcript, dedupe) lives in
+MongoDB and the agent's message history (its memory) lives in GCS. Telegram
+delivers messages via webhook; the whole agent turn runs inside the request (safe with
 scale-to-zero — CPU is only guaranteed during a request; Telegram retries
 unacknowledged updates and `update_id` dedupe makes that idempotent).
 
@@ -21,7 +21,7 @@ export PROJECT=<your-project> REGION=asia-southeast1 BUCKET=<your-bucket>
 
 gcloud config set project $PROJECT
 
-# Blob storage for session dumps
+# Blob storage for message history
 gcloud storage buckets create gs://$BUCKET --location=$REGION
 
 # Service account
@@ -78,13 +78,22 @@ TELEGRAM_BOT_TOKEN=... TELEGRAM_SECRET_TOKEN=... \
   uv run monty-claw set-webhook --url https://<run-url>/webhook/telegram
 ```
 
+## Generated media
+
+`generate_image` writes mock-up PNGs to the same bucket under `media/` and the
+service serves them at `/media/...`, so the bucket stays private. Telegram gets
+the image inline as well: the bytes are uploaded via `sendPhoto`, which works
+even before `PUBLIC_BASE_URL` is set. Set it to the Cloud Run URL
+(`--update-env-vars=PUBLIC_BASE_URL=https://...`) so the links the assistant
+sends alongside the photo are absolute.
+
 ## Smoke test
 
 1. Message the bot: "remember that my favorite fruit is durian".
 2. Force a cold start (`gcloud run services update monty-claw --region=$REGION --update-env-vars=BUMP=1`
    or just wait for scale-to-zero).
 3. Ask: "what did I ask you to remember?" — the answer proves the GCS
-   session dump survived instance death.
+   message history survived instance death.
 
 ## Local development
 

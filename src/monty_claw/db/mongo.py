@@ -17,7 +17,6 @@ class MongoChatRepo:
             return None
         return ChatRecord(
             chat_key=chat_key,
-            history=doc.get('history', []),
             session_blob_key=doc.get('session_blob_key'),
             last_update_id=doc.get('last_update_id'),
             transcript=doc.get('transcript', []),
@@ -27,7 +26,6 @@ class MongoChatRepo:
         await self._chats.replace_one(
             {'_id': record.chat_key},
             {
-                'history': record.history,
                 'session_blob_key': record.session_blob_key,
                 'last_update_id': record.last_update_id,
                 'transcript': record.transcript,

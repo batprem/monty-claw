@@ -3,6 +3,7 @@ import pytest
 
 from monty_claw.app import create_app
 from monty_claw.config import Settings
+from monty_claw.rlm import images
 
 from .conftest import InMemoryChatRepo
 
@@ -58,7 +59,7 @@ async def login(client) -> None:
 async def test_index_served(client) -> None:
     response = await client.get('/')
     assert response.status_code == 200
-    assert 'monty-claw' in response.text
+    assert 'MontyClaw' in response.text
 
 
 async def test_login_rejects_bad_credentials(client) -> None:
@@ -144,3 +145,19 @@ async def test_web_disabled_without_credentials(tmp_path) -> None:
             response = await c.post('/api/login', json={'username': 'a', 'password': 'b'})
             assert response.status_code == 503
             assert (await c.get('/api/me')).status_code == 503
+
+
+async def test_media_is_served_without_auth(client) -> None:
+    storage = client.app.state.storage
+    await storage.put_bytes('media/web/prem/abc123.png', images.render_mockup('a bicycle', 64, 64))
+
+    response = await client.get('/media/web/prem/abc123.png')  # no login
+    assert response.status_code == 200
+    assert response.headers['content-type'].startswith('image/png')
+    assert response.content.startswith(b'\x89PNG')
+
+
+async def test_media_rejects_traversal_and_misses(client) -> None:
+    assert (await client.get('/media/web/prem/nope.png')).status_code == 404
+    assert (await client.get('/media/../sessions/web/prem.json')).status_code == 404
+    assert (await client.get('/media/web/prem/abc.json')).status_code == 404

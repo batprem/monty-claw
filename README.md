@@ -1,25 +1,47 @@
 # monty-claw
 
-A serverless, OpenClaw-style personal AI assistant. The agent runtime is a
-Recursive Language Model loop ([arXiv:2512.24601](docs/researchs/2512.24601-recursive-language-models.md)):
-the root LLM writes Python that executes in a persistent
-[pydantic-monty](https://github.com/pydantic/monty) sandbox per chat, and the
-sandbox's variables are the assistant's long-term memory. Monty session dumps
-make that memory durable across stateless invocations — MongoDB holds the
-structured chat state, GCS (or a local directory) holds the dump blobs, and
-the whole thing runs scale-to-zero on Cloud Run behind a Telegram webhook.
+A serverless, OpenClaw-style personal AI assistant. The agent runtime is
+Pydantic AI in [code mode](https://github.com/pydantic/monty#pydanticai-integration):
+one chat turn is one `Agent.run`, where the model writes Python that Pydantic
+AI executes in a [pydantic-monty](https://github.com/pydantic/monty) sandbox
+and dispatches the tool calls made from inside it — recursion in the spirit of
+[arXiv:2512.24601](docs/researchs/2512.24601-recursive-language-models.md),
+with `llm_query` fanning sub-model calls out from the sandbox. The sandbox
+REPL lives for one turn; the assistant's memory across turns is the message
+history, kept in GCS (or a local directory) while MongoDB holds the structured
+chat state. The whole thing runs scale-to-zero on Cloud Run behind a Telegram
+webhook.
 
 ![RLM architecture](docs/recursive_language_model_architecture.png)
 
 ```
 Telegram ──webhook──▶ FastAPI (Cloud Run)
-                        │  load history (MongoDB) + session dump (GCS)
+                        │  load message history (GCS) + chat record (MongoDB)
                         ▼
-                  RLM engine: root LLM ⇄ Monty session
-                        │  llm_query / send_message externals
+                  Agent.run with CodeMode: model ⇄ run_code (Monty)
+                        │  llm_query / send_message tools, called from code
                         ▼
-                  persist history + dump ──▶ reply via Bot API
+                  persist history ──▶ reply via Bot API
 ```
+
+## Agent tools
+
+Called from inside `run_code`, so the model can loop over them or fan them out
+with `asyncio.gather`:
+
+| Tool | What it does |
+|---|---|
+| `llm_query(prompt)` | Ask a sub-model a self-contained question |
+| `send_message(text)` | Interim note to the user mid-turn |
+| `generate_image(prompt, width, height)` | Store a mock-up image and return its URL |
+
+`generate_image` is a placeholder, not an image model: it renders the prompt
+onto a hash-derived background (PNG, via Pillow), stores it under
+`media/<chat>/<uuid>.png` in blob storage, and returns a URL served by the app
+at `/media/...` — no bucket ACLs needed, and the random key is what keeps it
+private. On Telegram the picture is also uploaded straight into the chat with
+`sendPhoto`, so it appears inline. Set `PUBLIC_BASE_URL` so the URLs are
+absolute and openable outside the web UI.
 
 ## Quick start
 
@@ -54,9 +76,9 @@ both `WEB_USERNAME` and `WEB_PASSWORD` are set.
 
 ## Layout
 
-- `src/monty_claw/rlm/` — the RLM engine, prompts, LLM client
-- `src/monty_claw/db/` — MongoDB chat records (history, dedupe, blob pointer)
-- `src/monty_claw/storage/` — blob storage for session dumps (GCS / local)
+- `src/monty_claw/rlm/` — the agent engine, instructions, model factory
+- `src/monty_claw/db/` — MongoDB chat records (transcript, dedupe, blob pointer)
+- `src/monty_claw/storage/` — blob storage for message history (GCS / local)
 - `src/monty_claw/channels/` — channel adapters (Telegram; Line/Slack later)
 - `src/monty_claw/web/` — login-protected web frontend (chat + configuration)
 - `snippets/` — standalone pydantic-monty examples
