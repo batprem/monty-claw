@@ -10,6 +10,20 @@ requires-python = ">=3.13"
 dependencies = [
     "openai>=3.3.1",
     "pydantic-monty>=0.0.21",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "pydantic-settings>=2.5",
+    "pymongo>=4.9",
+    "google-cloud-storage>=2.18",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "respx>=0.21",
+    "mongomock>=4.1",
 ]
 
 [project.scripts]
@@ -19,6 +33,7 @@ monty-claw = "monty_claw:main"
 module-name = "monty_claw._core"
 python-packages = ["monty_claw"]
 python-source = "src"
+include = [{ path = "src/monty_claw/web/static/**/*", format = ["sdist", "wheel"] }]
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
@@ -26,3 +41,8 @@ cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "C
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

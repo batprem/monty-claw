@@ -1,0 +1,11 @@
+.git
+.venv
+target
+.monty_claw_state
+.pytest_cache
+__pycache__
+*.pyc
+tests
+docs
+snippets
+.env

@@ -1,5 +1,3 @@
-from monty_claw._core import hello_from_bin
+from monty_claw.cli import main
 
-
-def main() -> None:
-    print(hello_from_bin())
+__all__ = ['main']

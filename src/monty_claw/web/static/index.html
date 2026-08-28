@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>monty-claw</title>
+<link rel="icon" type="image/jpeg" href="/static/logo.jpg">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1a1d21; --muted: #6b7280;
+    --accent: #2563eb; --accent-text: #ffffff; --border: #e2e5ea;
+    --bubble-user: #2563eb; --bubble-user-text: #ffffff;
+    --bubble-bot: #eceef2; --bubble-bot-text: #1a1d21; --danger: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216; --panel: #181b21; --text: #e7e9ee; --muted: #9aa1ad;
+      --accent: #3b82f6; --accent-text: #ffffff; --border: #2a2f38;
+      --bubble-user: #3b82f6; --bubble-user-text: #ffffff;
+      --bubble-bot: #232833; --bubble-bot-text: #e7e9ee; --danger: #f87171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; display: flex; align-items: center; gap: 8px; }
+  header h1 span { color: var(--accent); }
+  .logo { display: block; border-radius: 6px; }
+  header .logo { width: 24px; height: 24px; }
+  #login-box .logo { width: 44px; height: 44px; border-radius: 10px; margin-bottom: 12px; }
+  nav { display: flex; gap: 4px; }
+  nav button {
+    border: none; background: none; color: var(--muted); padding: 6px 12px;
+    border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+  nav button.active { background: var(--bg); color: var(--text); font-weight: 600; }
+  header .spacer { flex: 1; }
+  header .who { color: var(--muted); font-size: 13px; }
+  header .logout {
+    border: 1px solid var(--border); background: none; color: var(--muted);
+    padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  main { flex: 1; overflow: hidden; display: flex; justify-content: center; }
+  .page { width: 100%; max-width: 760px; display: none; flex-direction: column; padding: 0 16px; }
+  .page.active { display: flex; }
+
+  /* Chat */
+  #messages { flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 80%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); color: var(--bubble-user-text); border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--bubble-bot); color: var(--bubble-bot-text); border-bottom-left-radius: 4px; }
+  .msg.progress { opacity: .7; font-size: 13px; font-style: italic; }
+  .msg.pending { opacity: .6; }
+  .msg.error { border: 1px solid var(--danger); color: var(--danger); background: none; }
+  #composer { display: flex; gap: 8px; padding: 12px 0 16px; }
+  #composer textarea {
+    flex: 1; resize: none; padding: 10px 12px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    font: inherit; max-height: 140px;
+  }
+  #composer button, .btn {
+    border: none; background: var(--accent); color: var(--accent-text);
+    padding: 0 18px; border-radius: 12px; cursor: pointer; font: inherit; font-weight: 600;
+  }
+  #composer button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 12px; text-align: center; padding-bottom: 8px; }
+
+  /* Config */
+  #config-page { overflow-y: auto; padding-top: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 8px 10px; border-radius: 8px; font: inherit;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  .btn.save { padding: 9px 18px; }
+  .btn.danger { background: var(--danger); }
+  #config-status { margin-left: 12px; font-size: 13px; color: var(--muted); }
+  .readonly-list { color: var(--muted); font-size: 13px; margin: 0; padding-left: 18px; }
+
+  /* Login */
+  #login-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; z-index: 10;
+  }
+  #login-box { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 320px; }
+  #login-box h1 { font-size: 20px; margin: 0 0 4px; }
+  #login-box p { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+  #login-box .field input { background: var(--bg); }
+  #login-box button { width: 100%; padding: 10px; margin-top: 6px; }
+  #login-error { color: var(--danger); font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="login-overlay" class="hidden">
+  <form id="login-box">
+    <img class="logo" src="/static/logo.jpg" alt="monty-claw logo">
+    <h1>monty-<span style="color:var(--accent)">claw</span></h1>
+    <p>Sign in to your assistant</p>
+    <div class="field"><label for="login-username">Username</label>
+      <input id="login-username" autocomplete="username" required></div>
+    <div class="field"><label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password" required></div>
+    <button class="btn" type="submit">Sign in</button>
+    <p id="login-error"></p>
+  </form>
+</div>
+
+<header>
+  <h1><img class="logo" src="/static/logo.jpg" alt="monty-claw logo"><b>monty-<span>claw</span></b></h1>
+  <nav>
+    <button id="tab-chat" class="active">Chat</button>
+    <button id="tab-config">Configuration</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="who" id="who"></span>
+  <button class="logout" id="logout">Log out</button>
+</header>
+
+<main>
+  <section id="chat-page" class="page active">
+    <div id="messages"></div>
+    <form id="composer">
+      <textarea id="input" rows="1" placeholder="Message your assistant…"></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+    <div class="hint">Type <code>/reset</code> to wipe the assistant's memory. Enter to send, Shift+Enter for a new line.</div>
+  </section>
+
+  <section id="config-page" class="page">
+    <form id="config-form">
+      <div class="card">
+        <h2>LLM</h2>
+        <div class="field"><label for="cfg-llm_base_url">Base URL (OpenAI-compatible)</label>
+          <input id="cfg-llm_base_url" name="llm_base_url"></div>
+        <div class="row">
+          <div class="field"><label for="cfg-llm_model">Model</label>
+            <input id="cfg-llm_model" name="llm_model"></div>
+          <div class="field"><label for="cfg-llm_api_key">API key (leave masked to keep)</label>
+            <input id="cfg-llm_api_key" name="llm_api_key" autocomplete="off"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Engine</h2>
+        <div class="row">
+          <div class="field"><label for="cfg-max_iterations">Max iterations per turn</label>
+            <input id="cfg-max_iterations" name="max_iterations" type="number" min="1" max="50"></div>
+          <div class="field"><label for="cfg-turn_deadline_secs">Turn deadline (seconds)</label>
+            <input id="cfg-turn_deadline_secs" name="turn_deadline_secs" type="number" min="5" step="1"></div>
+          <div class="field"><label for="cfg-monty_max_duration_secs">Sandbox time budget (seconds)</label>
+            <input id="cfg-monty_max_duration_secs" name="monty_max_duration_secs" type="number" min="1" step="1"></div>
+          <div class="field"><label for="cfg-history_max_turns">History window (turns)</label>
+            <input id="cfg-history_max_turns" name="history_max_turns" type="number" min="1" max="200"></div>
+          <div class="field"><label for="cfg-stdout_max_bytes">Stdout truncation (bytes)</label>
+            <input id="cfg-stdout_max_bytes" name="stdout_max_bytes" type="number" min="256" step="256"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Deployment (read-only)</h2>
+        <ul class="readonly-list" id="config-readonly"></ul>
+      </div>
+      <div style="display:flex;align-items:center;padding-bottom:24px">
+        <button class="btn save" type="submit">Save configuration</button>
+        <span id="config-status"></span>
+      </div>
+    </form>
+  </section>
+</main>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    ...options,
+  });
+  if (response.status === 401) { showLogin(); throw new Error('not signed in'); }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.detail || response.statusText);
+  return data;
+}
+
+/* ---------- login ---------- */
+function showLogin() { $('login-overlay').classList.remove('hidden'); }
+function hideLogin() { $('login-overlay').classList.add('hidden'); }
+
+$('login-box').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  $('login-error').textContent = '';
+  try {
+    const data = await api('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: $('login-username').value,
+        password: $('login-password').value,
+      }),
+    });
+    $('who').textContent = data.username;
+    $('login-password').value = '';
+    hideLogin();
+    await Promise.all([loadHistory(), loadConfig()]);
+  } catch (error) {
+    $('login-error').textContent = error.message;
+  }
+});
+
+$('logout').addEventListener('click', async () => {
+  try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+  $('messages').innerHTML = '';
+  showLogin();
+});
+
+/* ---------- tabs ---------- */
+function activate(tab) {
+  $('tab-chat').classList.toggle('active', tab === 'chat');
+  $('tab-config').classList.toggle('active', tab === 'config');
+  $('chat-page').classList.toggle('active', tab === 'chat');
+  $('config-page').classList.toggle('active', tab === 'config');
+}
+$('tab-chat').addEventListener('click', () => activate('chat'));
+$('tab-config').addEventListener('click', () => activate('config'));
+
+/* ---------- chat ---------- */
+function addMessage(role, content, classes = []) {
+  const el = document.createElement('div');
+  el.className = ['msg', role === 'user' ? 'user' : 'bot', ...classes].join(' ');
+  el.textContent = content;
+  $('messages').appendChild(el);
+  $('messages').scrollTop = $('messages').scrollHeight;
+  return el;
+}
+
+async function loadHistory() {
+  $('messages').innerHTML = '';
+  const data = await api('/api/history');
+  for (const entry of data.transcript) {
+    addMessage(entry.role, entry.content, entry.progress ? ['progress'] : []);
+  }
+}
+
+let sending = false;
+async function sendMessage() {
+  const text = $('input').value.trim();
+  if (!text || sending) return;
+  sending = true;
+  $('send').disabled = true;
+  $('input').value = '';
+  addMessage('user', text);
+  const pending = addMessage('bot', 'Thinking…', ['pending']);
+  try {
+    const data = await api('/api/chat', { method: 'POST', body: JSON.stringify({ message: text }) });
+    pending.remove();
+    for (const line of data.progress || []) addMessage('bot', line, ['progress']);
+    addMessage('bot', data.reply);
+  } catch (error) {
+    pending.remove();
+    addMessage('bot', 'Error: ' + error.message, ['error']);
+  } finally {
+    sending = false;
+    $('send').disabled = false;
+    $('input').focus();
+  }
+}
+$('composer').addEventListener('submit', (event) => { event.preventDefault(); sendMessage(); });
+$('input').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
+});
+
+/* ---------- config ---------- */
+async function loadConfig() {
+  const data = await api('/api/config');
+  for (const [name, value] of Object.entries(data.editable)) {
+    const input = $('cfg-' + name);
+    if (input) input.value = value;
+  }
+  $('config-readonly').innerHTML = '';
+  for (const [name, value] of Object.entries(data.readonly)) {
+    const li = document.createElement('li');
+    li.textContent = `${name}: ${value}`;
+    $('config-readonly').appendChild(li);
+  }
+}
+
+$('config-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const body = {};
+  for (const input of event.target.querySelectorAll('input[name]')) {
+    body[input.name] = input.type === 'number' ? Number(input.value) : input.value;
+  }
+  const status = $('config-status');
+  status.textContent = 'Saving…';
+  try {
+    const data = await api('/api/config', { method: 'PUT', body: JSON.stringify(body) });
+    status.textContent = data.persisted ? 'Saved.' : 'Applied (but not persisted — check MongoDB).';
+    await loadConfig();
+  } catch (error) {
+    status.textContent = 'Error: ' + error.message;
+  }
+});
+
+/* ---------- boot ---------- */
+(async function boot() {
+  try {
+    const me = await api('/api/me');
+    $('who').textContent = me.username;
+    await Promise.all([loadHistory(), loadConfig()]);
+  } catch (_) { /* login overlay is already showing */ }
+})();
+</script>
+</body>
+</html>
