@@ -14,3 +14,9 @@ target/
 
 # Compiled extension in source tree
 *.so
+
+# Skill dev/test artifacts
+.agents/skills/pptx-workspace/
+
+# Office lock files
+~$*
