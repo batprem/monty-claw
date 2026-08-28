@@ -20,3 +20,9 @@ target/
 
 # Office lock files
 ~$*
+
+# monty-claw local state
+.monty_claw_state/
+.env
+.pytest_cache/
+!.env.example
