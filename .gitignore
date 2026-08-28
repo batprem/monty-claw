@@ -17,3 +17,6 @@ target/
 
 # Skill dev/test artifacts
 .agents/skills/pptx-workspace/
+
+# Office lock files
+~$*

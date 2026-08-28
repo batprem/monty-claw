@@ -22,8 +22,9 @@ uv run snippets/<file>.py
 | `05_filesystem_mounts.py` | `MountDir` in `overlay` / `read-only` / `read-write` modes, write budgets |
 | `06_llm_agent_in_sandbox.py` | An agent loop running *inside* the sandbox, calling a local LLM through an async external function (`AsyncMonty` + type-checked stubs) |
 | `07_code_interpreter.py` | The classic tool: local LLM writes Python, monty executes it under hard limits, errors fed back for self-repair |
+| `08_rlm_loop.py` | A minimal Recursive Language Model loop (arXiv:2512.24601): the long prompt lives as a REPL variable, the root LM writes code each turn, sub-LM calls happen inside that code via `await llm_query(...)`, and the answer exits symbolically through a `FINAL` variable |
 
-Examples 06 and 07 need a local Ollama server with the `minimax-m3:cloud`
+Examples 06, 07, and 08 need a local Ollama server with the `minimax-m3:cloud`
 model (`ollama run minimax-m3:cloud`), reached via the OpenAI SDK at
 `http://localhost:11434/v1`.
 
