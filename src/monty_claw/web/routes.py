@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-INDEX_HTML = Path(__file__).parent / 'static' / 'index.html'
+STATIC_DIR = Path(__file__).parent / 'static'
+INDEX_HTML = STATIC_DIR / 'index.html'
 TRANSCRIPT_MAX_ENTRIES = 200
 
 # Settings fields editable from the configuration tab. Everything else is

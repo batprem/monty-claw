@@ -14,6 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic_monty import AsyncMonty
 from pymongo import AsyncMongoClient
 
@@ -25,6 +26,7 @@ from monty_claw.rlm.llm import OpenAiLlmClient
 from monty_claw.storage import get_storage
 from monty_claw.web import apply_config
 from monty_claw.web import router as web_router
+from monty_claw.web.routes import STATIC_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan)
     app.include_router(web_router)
+    app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 
     @app.get('/healthz')
     async def healthz() -> dict:

@@ -9,6 +9,8 @@ make that memory durable across stateless invocations — MongoDB holds the
 structured chat state, GCS (or a local directory) holds the dump blobs, and
 the whole thing runs scale-to-zero on Cloud Run behind a Telegram webhook.
 
+![RLM architecture](docs/recursive_language_model_architecture.png)
+
 ```
 Telegram ──webhook──▶ FastAPI (Cloud Run)
                         │  load history (MongoDB) + session dump (GCS)
