@@ -1,0 +1,45 @@
+<svg viewBox="0 0 1200 548" font-family="Instrument Sans, system-ui, sans-serif" role="img" aria-label="How MontyClaw implements the RLM algorithm and what it adds for a chat assistant.">
+<text x="20" y="30" font-size="12.5" font-weight="700" fill="#D74248" letter-spacing="1.3">WHAT ALGORITHM 1 ASKS FOR</text>
+<text x="283.0" y="30" font-size="13.5" fill="#6E6A61">— and the monty primitive that answers it</text>
+<rect x="20" y="46" width="360" height="174" rx="14" fill="#FDF1F1" stroke="#E3B6B7" stroke-width="1.4"/>
+<text x="42" y="90" font-size="18" font-weight="700" fill="#232833">The root LM writes code</text>
+<text x="42" y="120" font-size="13.5" fill="#6E6A61">One user message is one Agent.run; the model</text>
+<text x="42" y="141" font-size="13.5" fill="#6E6A61">reaches for run_code instead of prose.</text>
+<rect x="42" y="174" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#D74248" stroke-width="1.2"/>
+<text x="200.0" y="196" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#D74248" text-anchor="middle">capabilities=[CodeMode()]</text>
+<rect x="420" y="46" width="360" height="174" rx="14" fill="#FDF1F1" stroke="#E3B6B7" stroke-width="1.4"/>
+<text x="442" y="90" font-size="18" font-weight="700" fill="#232833">An environment it cannot escape</text>
+<text x="442" y="120" font-size="13.5" fill="#6E6A61">A Rust interpreter in a subprocess worker.</text>
+<text x="442" y="141" font-size="13.5" fill="#6E6A61">State persists across one run, then goes.</text>
+<rect x="442" y="174" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#D74248" stroke-width="1.2"/>
+<text x="600.0" y="196" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#D74248" text-anchor="middle">pydantic-monty</text>
+<rect x="820" y="46" width="360" height="174" rx="14" fill="#FDF1F1" stroke="#E3B6B7" stroke-width="1.4"/>
+<text x="842" y="90" font-size="18" font-weight="700" fill="#232833">Recursion from inside the code</text>
+<text x="842" y="120" font-size="13.5" fill="#6E6A61">The sandbox calls sub-LMs in loops and</text>
+<text x="842" y="141" font-size="13.5" fill="#6E6A61">fans them out with asyncio.gather.</text>
+<rect x="842" y="174" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#D74248" stroke-width="1.2"/>
+<text x="1000.0" y="196" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#D74248" text-anchor="middle">await llm_query(prompt=…)</text>
+<text x="20" y="262" font-size="12.5" font-weight="700" fill="#1F6FB2" letter-spacing="1.3">WHAT A CHAT ASSISTANT NEEDS ON TOP</text>
+<text x="360.4" y="262" font-size="13.5" fill="#6E6A61">— tools the paper never had to describe</text>
+<rect x="20" y="278" width="360" height="174" rx="14" fill="#F1F6FB" stroke="#B4CBE0" stroke-width="1.4"/>
+<text x="42" y="322" font-size="18" font-weight="700" fill="#232833">It speaks while it works</text>
+<text x="42" y="352" font-size="13.5" fill="#6E6A61">Interim notes reach the chat mid-run,</text>
+<text x="42" y="373" font-size="13.5" fill="#6E6A61">long before the final answer does.</text>
+<rect x="42" y="406" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#1F6FB2" stroke-width="1.2"/>
+<text x="200.0" y="428" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#1F6FB2" text-anchor="middle">await send_message(text=…)</text>
+<rect x="420" y="278" width="360" height="174" rx="14" fill="#F1F6FB" stroke="#B4CBE0" stroke-width="1.4"/>
+<text x="442" y="322" font-size="18" font-weight="700" fill="#232833">It hands back artifacts</text>
+<text x="442" y="352" font-size="13.5" fill="#6E6A61">A PNG lands in the bucket and inline in</text>
+<text x="442" y="373" font-size="13.5" fill="#6E6A61">Telegram; the app serves the URL back.</text>
+<rect x="442" y="406" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#1F6FB2" stroke-width="1.2"/>
+<text x="600.0" y="428" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#1F6FB2" text-anchor="middle">await generate_image(…)</text>
+<rect x="820" y="278" width="360" height="174" rx="14" fill="#F1F6FB" stroke="#B4CBE0" stroke-width="1.4"/>
+<text x="842" y="322" font-size="18" font-weight="700" fill="#232833">It remembers between messages</text>
+<text x="842" y="352" font-size="13.5" fill="#6E6A61">The REPL dies with the run — the serialized</text>
+<text x="842" y="373" font-size="13.5" fill="#6E6A61">history is restored from GCS on the next.</text>
+<rect x="842" y="406" width="316" height="34" rx="8" fill="#FFFFFF" stroke="#1F6FB2" stroke-width="1.2"/>
+<text x="1000.0" y="428" font-size="12.5" font-family="JetBrains Mono, monospace" fill="#1F6FB2" text-anchor="middle">sessions/{chat}.json</text>
+<rect x="20" y="484" width="1160" height="48" rx="12" fill="#F3F1EA" stroke="#C9C3B4" stroke-width="1.2"/>
+<text x="44" y="514" font-size="13.5" font-weight="600" fill="#232833">Bounded by construction</text>
+<text x="232" y="514" font-size="13" font-family="JetBrains Mono, monospace" fill="#6E6A61">request_limit=8 &#183; max_tool_calls=100 &#183; 50s turn deadline &#183; 30s / 200MB sandbox &#183; scale-to-zero</text>
+</svg>
