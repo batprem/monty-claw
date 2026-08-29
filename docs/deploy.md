@@ -34,8 +34,9 @@ gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
 printf '%s' "$TELEGRAM_BOT_TOKEN" | gcloud secrets create telegram-bot-token --data-file=-
 printf '%s' "$MONGODB_URI"        | gcloud secrets create mongodb-uri --data-file=-
 printf '%s' "$LLM_API_KEY"        | gcloud secrets create llm-api-key --data-file=-
+printf '%s' "$CURSOR_API_KEY"     | gcloud secrets create cursor-api-key --data-file=-
 openssl rand -hex 32 | tr -d '\n' | gcloud secrets create telegram-secret-token --data-file=-
-for s in telegram-bot-token mongodb-uri llm-api-key telegram-secret-token; do
+for s in telegram-bot-token mongodb-uri llm-api-key cursor-api-key telegram-secret-token; do
   gcloud secrets add-iam-policy-binding $s \
     --member="serviceAccount:monty-claw@$PROJECT.iam.gserviceaccount.com" \
     --role=roles/secretmanager.secretAccessor
@@ -49,12 +50,19 @@ gcloud run deploy monty-claw --source . --region=$REGION \
   --service-account=monty-claw@$PROJECT.iam.gserviceaccount.com \
   --allow-unauthenticated --min-instances=0 --timeout=300 --memory=1Gi \
   --set-env-vars=STORAGE_BACKEND=gcs,GCS_BUCKET=$BUCKET,LLM_BASE_URL=<url>,LLM_MODEL=<model> \
-  --set-secrets=TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,MONGODB_URI=mongodb-uri:latest,LLM_API_KEY=llm-api-key:latest,TELEGRAM_SECRET_TOKEN=telegram-secret-token:latest
+  --set-secrets=TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,MONGODB_URI=mongodb-uri:latest,LLM_API_KEY=llm-api-key:latest,CURSOR_API_KEY=cursor-api-key:latest,TELEGRAM_SECRET_TOKEN=telegram-secret-token:latest
 ```
 
 `--memory=1Gi` because Monty runs subprocess workers. `--timeout=300` is
-headroom; the engine's own `TURN_DEADLINE_SECS=50` keeps turns under
+headroom; the engine's own `TURN_DEADLINE_SECS=58` keeps turns under
 Telegram's webhook patience.
+
+`CURSOR_API_KEY` powers `generate_image` (see the README): a Cursor agent
+writes and runs a Pillow script per prompt. It spawns the SDK's bundled Node
+bridge inside the container, so keep `--memory=1Gi` and leave `--timeout=300`
+alone — a generation takes ~40s of the turn. Without the secret the service
+falls back to the mock-up renderer, and `IMAGE_BACKEND=mock` disables it
+outright.
 
 ### Web UI (optional)
 
