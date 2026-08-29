@@ -33,6 +33,7 @@ from pydantic_ai_harness import CodeMode
 from monty_claw.config import Settings
 from monty_claw.db.base import ChatRecord, ChatRepo
 from monty_claw.rlm import images, prompts
+from monty_claw.rlm.images import ImageGenerator
 from monty_claw.rlm.llm import build_model
 from monty_claw.storage.base import BlobStorage
 
@@ -61,10 +62,14 @@ class RlmEngine:
         storage: BlobStorage,
         settings: Settings,
         model: Model | str | None = None,
+        image_generator: ImageGenerator | None = None,
     ) -> None:
         self._repo = repo
         self._storage = storage
         self._settings = settings
+        self._images = (
+            image_generator if image_generator is not None else images.build_image_generator(settings)
+        )
         self._model = model if model is not None else build_model(settings)
         # Sub-model for `llm_query`: no tools, no code mode — just an answer.
         self._sub_agent = Agent(self._model, instructions=prompts.SUB_LLM_INSTRUCTIONS)
@@ -105,22 +110,21 @@ class RlmEngine:
         ) -> str:
             """Make an image for a prompt and return a URL the user can open.
 
-            This is a MOCK-UP generator, not an image model: it renders the
-            prompt onto a generated background. Pass the URL to the user as-is
-            and say the picture is a placeholder.
+            Slow — a picture takes tens of seconds — so ask for one only when
+            the user wants a picture, and pass the URL back to them as-is.
             """
             return await self._store_image(ctx.deps, prompt, width, height)
 
         return agent
 
     async def _store_image(self, deps: TurnDeps, prompt: str, width: int, height: int) -> str:
-        """Render the mock-up, store it, push it to the chat, and return its URL."""
-        data = images.render_mockup(prompt, width, height)
+        """Generate the image, store it, push it to the chat, and return its URL."""
+        data = await self._generate_image(prompt, width, height)
         # Unguessable name: the media route serves these without auth so the
         # URL can be shared, and the key is the only thing protecting them.
         key = f'media/{deps.chat_key.replace(":", "/")}/{uuid4().hex}{images.EXTENSION}'
         await self._storage.put_bytes(key, data)
-        logger.info('chat %s: stored mock-up %s (%d bytes)', deps.chat_key, key, len(data))
+        logger.info('chat %s: stored image %s (%d bytes)', deps.chat_key, key, len(data))
         if deps.send_photo is not None:
             # Best-effort: the URL still works if the channel upload fails.
             try:
@@ -128,6 +132,14 @@ class RlmEngine:
             except Exception:
                 logger.warning('could not send the image to the chat', exc_info=True)
         return f'{self._settings.public_base_url.rstrip("/")}/{key}'
+
+    async def _generate_image(self, prompt: str, width: int, height: int) -> bytes:
+        """A failed backend costs the user their picture, not their turn."""
+        try:
+            return await self._images.generate(prompt, width, height)
+        except Exception:
+            logger.warning('image generation failed; falling back to a mock-up', exc_info=True)
+            return images.render_mockup(prompt, width, height)
 
     async def run_turn(
         self,

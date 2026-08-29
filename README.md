@@ -33,15 +33,22 @@ with `asyncio.gather`:
 |---|---|
 | `llm_query(prompt)` | Ask a sub-model a self-contained question |
 | `send_message(text)` | Interim note to the user mid-turn |
-| `generate_image(prompt, width, height)` | Store a mock-up image and return its URL |
+| `generate_image(prompt, width, height)` | Draw an image for the prompt and return its URL |
 
-`generate_image` is a placeholder, not an image model: it renders the prompt
-onto a hash-derived background (PNG, via Pillow), stores it under
-`media/<chat>/<uuid>.png` in blob storage, and returns a URL served by the app
-at `/media/...` — no bucket ACLs needed, and the random key is what keeps it
-private. On Telegram the picture is also uploaded straight into the chat with
-`sendPhoto`, so it appears inline. Set `PUBLIC_BASE_URL` so the URLs are
-absolute and openable outside the web UI.
+`generate_image` is backed by Cursor (`IMAGE_BACKEND=cursor`, the default):
+a Cursor agent gets an empty scratch directory and is asked to write and run a
+Pillow script that draws the picture, so the result is real and prompt-specific
+without a diffusion model behind it. Set `CURSOR_API_KEY` to turn it on; without
+one it falls back to `mock`, the old hash-derived placeholder, as it also does
+whenever a generation fails or overruns `CURSOR_IMAGE_TIMEOUT_SECS`. Budget for
+it: a generation is a whole agent turn, ~40s, so it must fit inside
+`TURN_DEADLINE_SECS`.
+
+Either way the PNG is stored at `media/<chat>/<uuid>.png` in blob storage and
+returned as a URL served by the app at `/media/...` — no bucket ACLs needed, and
+the random key is what keeps it private. On Telegram the picture is also
+uploaded straight into the chat with `sendPhoto`, so it appears inline. Set
+`PUBLIC_BASE_URL` so the URLs are absolute and openable outside the web UI.
 
 ## Quick start
 

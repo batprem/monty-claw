@@ -111,3 +111,64 @@ async def test_image_url_is_relative_without_a_public_base_url(settings, repo) -
     )
     url = await engine._store_image(TurnDeps(chat_key='t:1'), 'a bicycle', 256, 256)
     assert url.startswith('/media/t/1/') and url.endswith('.png')
+
+
+def test_backend_choice_falls_back_to_mock_without_a_key(settings) -> None:
+    settings.image_backend = 'cursor'
+    settings.cursor_api_key = ''
+    assert isinstance(images.build_image_generator(settings), images.MockImageGenerator)
+
+    settings.image_backend = 'mock'
+    settings.cursor_api_key = 'crsr_test'
+    assert isinstance(images.build_image_generator(settings), images.MockImageGenerator)
+
+
+def test_cursor_backend_is_chosen_when_configured(settings) -> None:
+    from monty_claw.rlm.cursor_images import CursorImageGenerator
+
+    settings.image_backend = 'cursor'
+    settings.cursor_api_key = 'crsr_test'
+    assert isinstance(images.build_image_generator(settings), CursorImageGenerator)
+
+
+async def test_engine_uses_the_configured_generator(settings, repo) -> None:
+    class StubGenerator:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, int, int]] = []
+
+        async def generate(self, prompt: str, width: int = 1024, height: int = 1024) -> bytes:
+            self.calls.append((prompt, width, height))
+            return images.render_mockup('stub', width, height)
+
+    generator = StubGenerator()
+    engine = RlmEngine(
+        repo=repo,
+        storage=LocalStorage(settings.local_storage_dir),
+        settings=settings,
+        model=ScriptedModel([say('ok')]),
+        image_generator=generator,
+    )
+    await engine._store_image(TurnDeps(chat_key='t:1'), 'a red bicycle', 256, 256)
+    assert generator.calls == [('a red bicycle', 256, 256)]
+
+
+async def test_a_broken_generator_still_yields_a_picture(settings, repo) -> None:
+    class BrokenGenerator:
+        async def generate(self, prompt: str, width: int = 1024, height: int = 1024) -> bytes:
+            raise RuntimeError('cursor is down')
+
+    photos: list[bytes] = []
+
+    async def send_photo(data: bytes, caption: str) -> None:
+        photos.append(data)
+
+    engine = RlmEngine(
+        repo=repo,
+        storage=LocalStorage(settings.local_storage_dir),
+        settings=settings,
+        model=ScriptedModel([say('ok')]),
+        image_generator=BrokenGenerator(),
+    )
+    deps = TurnDeps(chat_key='t:1', send_photo=send_photo)
+    assert (await engine._store_image(deps, 'a bicycle', 256, 256)).endswith('.png')
+    assert open_png(photos[0]).size == (256, 256)  # the mock-up took over

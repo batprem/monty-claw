@@ -18,6 +18,16 @@ class Settings(BaseSettings):
     llm_model: str = 'minimax-m3:cloud'
     llm_api_key: str = 'ollama'
 
+    # Image generation. 'cursor' runs a Cursor agent that writes and executes
+    # a Pillow script per prompt; 'mock' is the hash-derived placeholder.
+    # Without CURSOR_API_KEY, 'cursor' degrades to 'mock'.
+    image_backend: Literal['cursor', 'mock'] = 'cursor'
+    cursor_api_key: str = ''
+    cursor_model: str = 'composer-2.5'
+    # A generation is a whole agent turn, so this is tens of seconds. It has to
+    # fit inside `turn_deadline_secs` or the turn dies before the fallback runs.
+    cursor_image_timeout_secs: float = 40.0
+
     # Database (MongoDB) — structured chat state
     mongodb_uri: str = 'mongodb://localhost:27017'
     mongodb_db: str = 'monty_claw'

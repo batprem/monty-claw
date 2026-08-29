@@ -1,10 +1,11 @@
-"""Mock image generation: a deterministic PNG placeholder, no model involved.
+"""Image generation: the backend protocol, plus the mock-up fallback.
 
-There is no image model behind this. `render_mockup` draws the prompt onto a
-background derived from the prompt's own hash, so the same prompt always gives
-the same picture and different prompts look different. It exists so the agent
-(and anything downstream of it) can exercise the whole generate → store →
-share-a-URL path before a real generator is wired in.
+The real generator is `cursor_images.CursorImageGenerator`; `build_image_generator`
+picks it when one is configured. What stays here is the fallback: `render_mockup`
+draws the prompt onto a background derived from the prompt's own hash, so the
+same prompt always gives the same picture and different prompts look different.
+It is what the agent gets when no backend is configured, and what the engine
+falls back to when the real one fails or runs out of time.
 
 PNG rather than SVG because Telegram's `sendPhoto` only takes raster images,
 and the point of a generated picture is that it arrives inline in the chat.
@@ -12,9 +13,15 @@ and the point of a generated picture is that it arrives inline in the chat.
 
 import colorsys
 import hashlib
+import logging
 from io import BytesIO
+from typing import Protocol
 
 from PIL import Image, ImageDraw, ImageFont
+
+from monty_claw.config import Settings
+
+logger = logging.getLogger(__name__)
 
 MIME_TYPE = 'image/png'
 EXTENSION = '.png'
@@ -27,6 +34,30 @@ BADGE = 'MOCK-UP - not a generated image'
 
 _MAX_LINES = 6
 _CHARS_PER_LINE = 26
+
+
+class ImageGenerator(Protocol):
+    async def generate(self, prompt: str, width: int = 1024, height: int = 1024) -> bytes:
+        """Return PNG bytes of `width` x `height` depicting `prompt`."""
+        ...
+
+
+class MockImageGenerator:
+    """The placeholder backend: no model, no network, always fast."""
+
+    async def generate(self, prompt: str, width: int = 1024, height: int = 1024) -> bytes:
+        return render_mockup(prompt, width, height)
+
+
+def build_image_generator(settings: Settings) -> ImageGenerator:
+    if settings.image_backend == 'cursor':
+        if not settings.cursor_api_key:
+            logger.warning('IMAGE_BACKEND=cursor but CURSOR_API_KEY is unset; using mock-ups')
+            return MockImageGenerator()
+        from monty_claw.rlm.cursor_images import CursorImageGenerator
+
+        return CursorImageGenerator(settings)
+    return MockImageGenerator()
 
 
 def render_mockup(prompt: str, width: int = 1024, height: int = 1024) -> bytes:
