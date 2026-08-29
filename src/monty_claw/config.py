@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     image_backend: Literal['cursor', 'mock'] = 'cursor'
     cursor_api_key: str = ''
     cursor_model: str = 'composer-2.5'
-    # A generation is a whole agent turn, so this is tens of seconds. It has to
-    # fit inside `turn_deadline_secs` or the turn dies before the fallback runs.
-    cursor_image_timeout_secs: float = 40.0
+    # A generation is a whole agent turn — 40s is typical. It has to fit inside
+    # `turn_deadline_secs` with room for the mock-up fallback, or the turn dies
+    # before the fallback can run.
+    cursor_image_timeout_secs: float = 50.0
 
     # Database (MongoDB) — structured chat state
     mongodb_uri: str = 'mongodb://localhost:27017'
@@ -59,7 +60,8 @@ class Settings(BaseSettings):
     monty_max_duration_secs: float = 30.0
     monty_max_memory: int = 200 * 1024 * 1024
     # Stay under Telegram's ~60s webhook patience; Cloud Run timeout is headroom.
-    turn_deadline_secs: float = 50.0
+    # A turn that generates an image spends most of this inside Cursor.
+    turn_deadline_secs: float = 58.0
 
     port: int = 8080
 
